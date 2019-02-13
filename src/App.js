@@ -28,7 +28,7 @@ class App extends Component {
       jogadores: [],
       apostas: [],
       saldo: '',
-      value: '1',
+      value: '0',
       message: '',
       nome: '',
       ganhadorNome: ' ',
@@ -47,6 +47,7 @@ class App extends Component {
     this.getJogadoresCB = this.getJogadoresCB.bind(this);
     this.getApostasCB = this.getApostasCB.bind(this);
     this.getSaldoCB = this.getSaldoCB.bind(this);
+    this.getValorApostaCB = this.getValorApostaCB.bind(this);
     this.getJogadorPorIdCB = this.getJogadorPorIdCB.bind(this);
     this.entrarCB = this.entrarCB.bind(this);
     this.escolherGanhadorCB = this.escolherGanhadorCB.bind(this);
@@ -109,6 +110,16 @@ class App extends Component {
     }
   };
 
+  getValorApostaCB(error, _value)
+  {
+    if (error) {
+      console.error(error);
+    } else {
+      var valorAposta = web3.fromWei(_value.toNumber(), 'ether');
+      this.setState({value: valorAposta});
+    }
+  };
+
   entrarCB(error, _transactionHash)
   {
     if (error) {
@@ -131,10 +142,10 @@ class App extends Component {
     {
       var saldoEther = web3.fromWei(result.toNumber(), 'ether');
 	this.setState({saldoCarteira: saldoEther});
-      if (saldoEther < 1.4)
+      /*if (saldoEther < 1.4)
       {
         this.setState({semSaldo: true, apostaButton: "Sem Saldo"});
-      }
+      }*/
     }
   }
 
@@ -177,13 +188,14 @@ class App extends Component {
 
 
   async componentDidMount() {
-    document.title = 'FIAP ON - MBA Inaugural - Smart Contracts';
+    document.title = 'FIAP - Smart Contracts';
     this.setState({contractNumber: bolao.address});
 
     bolao.getGerente(this.getGerenteCB);
     bolao.getApostas(this.getApostasCB);
     bolao.getJogadores(this.getJogadoresCB);
     bolao.getSaldo(this.getSaldoCB);
+    bolao.getValorAposta(this.getValorApostaCB);
 
     this.ApostaEvent = bolao.ApostaEvent({some: 'args'}, {fromBlock: bolao.defaultBlock, toBlock: 'latest'});
     //this.ApostaEvent = bolao.ApostaEvent({some: 'args'}, {fromBlock: 0, toBlock: 'latest'});
@@ -206,7 +218,7 @@ class App extends Component {
     bolao.entrar(this.state.nome, {
       from: accounts[0],
       value: web3.toWei(this.state.value, 'ether'),
-      gasPrice: '1000000000000'
+      gasPrice: '100000000000'
     }, this.entrarCB);
 
     web3.eth.getBalance(accounts[0], this.getSaldoCarteiraCB);
@@ -223,11 +235,21 @@ class App extends Component {
 
   };
 
+  mudarAposta = async () => {
+    const accounts = web3.eth.accounts;
+
+    bolao.setValorAposta(web3.toWei(this.state.value, 'ether'), {
+      from: accounts[0],
+      gasPrice: '100000000000'
+    }, this.entrarCB);
+
+  };
+
   renderPainel()
   {
     return(<div className="container">
             <div className="row">
-              <div className="col-sm-12">
+              <div className="col-sm-6">
                 <div className="card">
                   <div className="card-body">
                     <div className="card-header">
@@ -235,6 +257,16 @@ class App extends Component {
                     </div>
                     <div className="mt-2">{this.state.contractNumber}
                     { web3.eth.accounts[0] === this.state.gerente ? <Button className="btn-sm" variant="danger" onClick={this.onClick}>{this.state.fimDeJogoButton}</Button> : null }</div>
+                  </div>
+                </div>
+              </div>
+              <div className="col-sm-6">
+                <div className="card">
+                  <div className="card-body">
+                    <div className="card-header">
+                      Valor da Aposta <FontAwesomeIcon icon="file-contract" />
+                    </div>
+                    { web3.eth.accounts[0] === this.state.gerente ? this.renderValorAposta() : <div className="mt-2">{this.state.value} ETH</div> }
                   </div>
                 </div>
               </div>
@@ -268,6 +300,21 @@ class App extends Component {
             </div>
           </div>
         </div>);
+  }
+
+  renderValorAposta()
+  {
+    return (<div className="mt-2">
+    <div class="form-group row">
+      <div class="col-3"><FormControl
+    type="text"
+    required
+    value={this.state.value}
+                onChange={event => this.setState({ value: event.target.value })}
+    /> </div><div class="col-3">ETH</div>
+    <div class="col-6">
+      <Button className="btn" variant="primary" onClick={this.mudarAposta}>Mudar valor</Button>
+      </div></div></div>);
   }
 
   renderApostaBox()
